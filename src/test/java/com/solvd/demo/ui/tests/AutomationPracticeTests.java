@@ -7,9 +7,12 @@ import org.openqa.selenium.support.ui.*;
 import org.testng.Assert;
 import org.testng.annotations.*;
 
+import com.solvd.demo.ui.pages.ContactUsPage;
+import com.solvd.demo.ui.pages.HomePage;
+import com.solvd.demo.ui.pages.LoginPage;
+
 import java.time.Duration;
 import java.util.List;
-
 public class AutomationPracticeTests {
 
     private WebDriver driver;
@@ -42,8 +45,10 @@ public class AutomationPracticeTests {
         search.clear();
         search.sendKeys("dress");
         search.sendKeys(Keys.ENTER);
-        WebElement results = driver.findElement(By.cssSelector(".product_list"));
-        Assert.assertTrue(results.isDisplayed(), "Search results are visible");
+        By resultsHeader = By.cssSelector(".page-heading.product-listing");
+        WebElement header = wait.until(ExpectedConditions.visibilityOfElementLocated(resultsHeader));
+
+        Assert.assertTrue(header.isDisplayed(), "Search results header visible");
     }
 
     @Test(priority = 3)
@@ -83,12 +88,22 @@ public class AutomationPracticeTests {
 
     @Test(priority = 7)
     public void trySubscribeToNewsletterInvalidEmail() {
-        WebElement newsletter = driver.findElement(By.id("newsletter-input"));
-        newsletter.clear();
-        newsletter.sendKeys("not-an-email");
-        driver.findElement(By.name("submitNewsletter")).click();
-        WebElement alert = driver.findElement(By.cssSelector(".alert"));
-        Assert.assertTrue(alert.getText().toLowerCase().contains("invalid"), "Newsletter error shown");
+        By newsletterInput = By.id("newsletter-input");
+        By submitButton = By.name("submitNewsletter");
+        By alertBox = By.cssSelector(".alert");
+
+        WebElement input = wait.until(ExpectedConditions.elementToBeClickable(newsletterInput));
+        input.clear();
+        input.sendKeys("not-an-email");
+        driver.findElement(submitButton).click();
+
+        WebElement alert = wait.until(ExpectedConditions.visibilityOfElementLocated(alertBox));
+
+        String alertText = alert.getText().trim().toLowerCase();
+        Assert.assertTrue(
+                alertText.contains("invalid email address"),
+                "Newsletter error shown for invalid input"
+        );
     }
 
     @Test(priority = 8)
@@ -113,7 +128,6 @@ public class AutomationPracticeTests {
         Assert.assertTrue(subCategory.isDisplayed(), "Subcategory visible on hover");
     }
 
-
     @Test(priority = 9)
     public void openTShirtsCategoryAndCheckProducts() {
         driver.findElement(By.linkText("T-SHIRTS")).click();
@@ -130,4 +144,52 @@ public class AutomationPracticeTests {
         WebElement passwordField = driver.findElement(By.id("passwd"));
         Assert.assertTrue(emailField.isDisplayed() && passwordField.isDisplayed(), "Login fields are visible");
     }
+
+    @Test(priority = 11)
+    public void searchUsingPageObject() {
+        HomePage home = new HomePage(driver);
+        home.open();
+        home.search("blouse");
+        WebElement results = wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".product_list")));
+        Assert.assertTrue(results.isDisplayed(), "Search results visible");
+    }
+
+    @Test(priority = 12)
+    public void hoverAndOpenTshirtsCategory() {
+        HomePage home = new HomePage(driver);
+        home.open();
+        home.hoverWomenMenu();
+        home.clickTshirts();
+        Assert.assertTrue(driver.getTitle().toLowerCase().contains("t-shirts"));
+    }
+
+    @Test(priority = 13)
+    public void loginWithInvalidCredentials() {
+        driver.findElement(By.className("login")).click();
+        LoginPage loginPage = new LoginPage(driver);
+        loginPage.loginInvalid("fake@mail.com", "wrongpass");
+        Assert.assertTrue(loginPage.getErrorText().contains("Authentication failed"));
+    }
+
+    @Test(priority = 14)
+    public void contactFormInvalidEmailShowsError() {
+        driver.get("https://automationpractice.pl/index.php?controller=contact");
+
+        ContactUsPage contactPage = new ContactUsPage(driver);
+        contactPage.submitForm("invalid-email", "message");
+
+        String error = contactPage.getErrorMessage().toLowerCase();
+        Assert.assertTrue(error.contains("invalid email address"), "Error shown for invalid contact form email");
+    }
+
+    @Test(priority = 15)
+    public void scrollAndVerifyFooterVisible() {
+        HomePage home = new HomePage(driver);
+        home.open();
+        By footer = By.cssSelector("#footer");
+        home.scrollToElement(footer);
+        WebElement footerElement = wait.until(ExpectedConditions.visibilityOfElementLocated(footer));
+        Assert.assertTrue(footerElement.isDisplayed(), "Footer is visible");
+    }
+
 }
